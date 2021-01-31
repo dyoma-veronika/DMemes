@@ -1,5 +1,6 @@
 package com.example.developerslife;
 
+import com.google.android.material.button.MaterialButton;
 import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
@@ -8,24 +9,12 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
 import android.widget.TextView;
 
 import com.example.developerslife.network.CacheArrayList;
 import com.example.developerslife.network.NetworkServiceProvider;
 import com.example.developerslife.network.Post;
 import com.example.developerslife.network.Result;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Deque;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.ListIterator;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedDeque;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -43,7 +32,17 @@ abstract class BaseFragment extends Fragment {
     protected MaterialCardView cardView;
     protected TextView descView;
 
+    protected View emptyView;
+    protected MaterialButton reloadEmptyButton;
+
+    protected View errorView;
+    protected MaterialButton reloadErrorButton;
+
     protected boolean postsIsReached = false;
+
+    private CacheArrayList<Post> cache = getCache();
+    private int page = getFirstPage();
+    private String pagePath = getPagePath();
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
@@ -56,6 +55,12 @@ abstract class BaseFragment extends Fragment {
 
         cardView = view.findViewById(R.id.card_view);
         descView = view.findViewById(R.id.description_view);
+
+        emptyView = view.findViewById(R.id.empty_view);
+        reloadEmptyButton = view.findViewById(R.id.button_reload);
+
+        errorView = view.findViewById(R.id.error_view);
+        reloadErrorButton = view.findViewById(R.id.button_reload_error);
 
         bindListeners();
 
@@ -72,19 +77,20 @@ abstract class BaseFragment extends Fragment {
 
     protected void bindListeners() {
         buttonPrev.setOnClickListener(v -> {
-            if (getCache().hasPrevious()) {
-                descView.setText(getCache().previous().getDescription());
+            if (cache.hasPrevious()) {
+                descView.setText(cache.previous().getDescription());
                 buttonNext.setVisibility(View.VISIBLE);
+                setSuccessState();
             }
-            if (!getCache().hasPrevious()) {
+            if (!cache.hasPrevious()) {
                 buttonPrev.setVisibility(View.INVISIBLE);
             }
 
         });
 
         buttonNext.setOnClickListener(v -> {
-            if (getCache().hasNext()) {
-                descView.setText(getCache().next().getDescription());
+            if (cache.hasNext()) {
+                descView.setText(cache.next().getDescription());
                 buttonPrev.setVisibility(View.VISIBLE);
             } else {
                 if (!postsIsReached) {
@@ -92,14 +98,113 @@ abstract class BaseFragment extends Fragment {
                 }
             }
         });
+
+        reloadEmptyButton.setOnClickListener(v -> {
+            loadFirstPage();
+        });
+
+        reloadErrorButton.setOnClickListener(v -> {
+            if (page == 0) {
+                loadFirstPage();
+            } else {
+                loadNextPage();
+            }
+        });
     }
 
     @SuppressLint("CheckResult")
-    protected abstract void loadFirstPage();
+    protected void loadFirstPage() {
+        NetworkServiceProvider
+                .buildService()
+                .getPosts(pagePath, page)
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribeWith(
+                        new SingleObserver<Result>() {
+                            @Override
+                            public void onSubscribe(@NonNull Disposable d) {
+
+                            }
+
+                            @Override
+                            public void onSuccess(@NonNull Result result) {
+                                if (result.getResult().isEmpty()) {
+                                    setEmptyState();
+                                    postsIsReached = true;
+                                    return;
+                                }
+
+                                cache.addAll(result.getResult());
+                                descView.setText(cache.next().getDescription());
+                                buttonNext.setVisibility(View.VISIBLE);
+
+                                setSuccessState();
+                            }
+
+                            @Override
+                            public void onError(@NonNull Throwable e) {
+                                setErrorState();
+                            }
+                        }
+                );
+    }
 
     @SuppressLint("CheckResult")
-    protected abstract void loadNextPage();
+    protected void loadNextPage() {
+        page++;
+        NetworkServiceProvider
+                .buildService()
+                .getPosts(pagePath, page)
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribeWith(new SingleObserver<Result>() {
+                    @Override
+                    public void onSubscribe(@NonNull Disposable d) {
 
-    protected  abstract CacheArrayList<Post> getCache();
+                    }
 
+                    @Override
+                    public void onSuccess(@NonNull Result result) {
+                        if (result.getResult().isEmpty()) {
+                            postsIsReached = true;
+                            buttonNext.setVisibility(View.INVISIBLE);
+                            return;
+                        }
+
+                        cache.addAll(result.getResult());
+                        descView.setText(cache.next().getDescription());
+                        setSuccessState();
+                    }
+
+                    @Override
+                    public void onError(@NonNull Throwable e) {
+                        buttonNext.setVisibility(View.INVISIBLE);
+                        setErrorState();
+                    }
+                });
+    }
+
+    protected abstract CacheArrayList<Post> getCache();
+
+    protected abstract int getFirstPage();
+
+    protected abstract String getPagePath();
+
+    protected void setEmptyState() {
+        cardView.setVisibility(View.GONE);
+        errorView.setVisibility(View.GONE);
+        emptyView.setVisibility(View.VISIBLE);
+    }
+
+    protected void setSuccessState() {
+        cardView.setVisibility(View.VISIBLE);
+        errorView.setVisibility(View.GONE);
+        emptyView.setVisibility(View.GONE);
+    }
+
+    protected void setErrorState() {
+        cardView.setVisibility(View.GONE);
+        errorView.setVisibility(View.VISIBLE);
+        emptyView.setVisibility(View.GONE);
+    }
 }
