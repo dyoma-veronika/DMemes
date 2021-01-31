@@ -10,9 +10,11 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
+import com.bumptech.glide.Glide;
 import com.example.developerslife.network.CacheArrayList;
 import com.example.developerslife.network.NetworkServiceProvider;
 import com.example.developerslife.network.Post;
@@ -34,6 +36,7 @@ abstract class BaseFragment extends Fragment {
     protected FloatingActionButton buttonNext;
 
     protected MaterialCardView cardView;
+    protected ImageView imageView;
     protected TextView descView;
 
     protected View emptyView;
@@ -60,6 +63,7 @@ abstract class BaseFragment extends Fragment {
         buttonNext = view.findViewById(R.id.button_next);
 
         cardView = view.findViewById(R.id.card_view);
+        imageView = view.findViewById(R.id.image_view);
         descView = view.findViewById(R.id.description_view);
 
         emptyView = view.findViewById(R.id.empty_view);
@@ -86,7 +90,9 @@ abstract class BaseFragment extends Fragment {
     protected void bindListeners() {
         buttonPrev.setOnClickListener(v -> {
             if (cache.hasPrevious()) {
-                descView.setText(cache.previous().getDescription());
+                Post post = cache.previous();
+                descView.setText(post.getDescription());
+                Glide.with(requireActivity()).load(post.getGifURL()).into(imageView);
                 buttonNext.setVisibility(View.VISIBLE);
                 setSuccessState();
             }
@@ -98,7 +104,9 @@ abstract class BaseFragment extends Fragment {
 
         buttonNext.setOnClickListener(v -> {
             if (cache.hasNext()) {
-                descView.setText(cache.next().getDescription());
+                Post post = cache.next();
+                descView.setText(post.getDescription());
+                Glide.with(requireActivity()).load(post.getGifURL()).into(imageView);
                 buttonPrev.setVisibility(View.VISIBLE);
             } else {
                 if (!postsIsReached) {
@@ -143,7 +151,9 @@ abstract class BaseFragment extends Fragment {
                                 }
 
                                 cache.addAll(result.getResult());
-                                descView.setText(cache.next().getDescription());
+                                Post post = cache.next();
+                                descView.setText(post.getDescription());
+                                Glide.with(requireActivity()).load(post.getGifURL()).into(imageView);
                                 buttonNext.setVisibility(View.VISIBLE);
 
                                 setSuccessState();
@@ -180,7 +190,9 @@ abstract class BaseFragment extends Fragment {
                         }
 
                         cache.addAll(result.getResult());
-                        descView.setText(cache.next().getDescription());
+                        Post post = cache.next();
+                        descView.setText(post.getDescription());
+                        Glide.with(requireActivity()).load(post.getGifURL()).into(imageView);
                         buttonNext.setVisibility(View.VISIBLE);
 
                         setSuccessState();
