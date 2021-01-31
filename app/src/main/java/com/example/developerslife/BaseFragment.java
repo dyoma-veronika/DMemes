@@ -3,18 +3,22 @@ package com.example.developerslife;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.android.material.progressindicator.CircularProgressIndicator;
 
 import android.annotation.SuppressLint;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import com.example.developerslife.network.CacheArrayList;
 import com.example.developerslife.network.NetworkServiceProvider;
 import com.example.developerslife.network.Post;
 import com.example.developerslife.network.Result;
+
+import java.util.concurrent.TimeUnit;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -37,6 +41,8 @@ abstract class BaseFragment extends Fragment {
 
     protected View errorView;
     protected MaterialButton reloadErrorButton;
+
+    protected ProgressBar loadingView;
 
     protected boolean postsIsReached = false;
 
@@ -61,6 +67,8 @@ abstract class BaseFragment extends Fragment {
 
         errorView = view.findViewById(R.id.error_view);
         reloadErrorButton = view.findViewById(R.id.button_reload_error);
+
+        loadingView = view.findViewById(R.id.loading_view);
 
         bindListeners();
 
@@ -123,7 +131,7 @@ abstract class BaseFragment extends Fragment {
                         new SingleObserver<Result>() {
                             @Override
                             public void onSubscribe(@NonNull Disposable d) {
-
+                                  setLoadingState();
                             }
 
                             @Override
@@ -160,7 +168,7 @@ abstract class BaseFragment extends Fragment {
                 .subscribeWith(new SingleObserver<Result>() {
                     @Override
                     public void onSubscribe(@NonNull Disposable d) {
-
+                        setLoadingState();
                     }
 
                     @Override
@@ -173,12 +181,13 @@ abstract class BaseFragment extends Fragment {
 
                         cache.addAll(result.getResult());
                         descView.setText(cache.next().getDescription());
+                        buttonNext.setVisibility(View.VISIBLE);
+
                         setSuccessState();
                     }
 
                     @Override
                     public void onError(@NonNull Throwable e) {
-                        buttonNext.setVisibility(View.INVISIBLE);
                         setErrorState();
                     }
                 });
@@ -194,17 +203,28 @@ abstract class BaseFragment extends Fragment {
         cardView.setVisibility(View.GONE);
         errorView.setVisibility(View.GONE);
         emptyView.setVisibility(View.VISIBLE);
+        loadingView.setVisibility(View.GONE);
     }
 
     protected void setSuccessState() {
         cardView.setVisibility(View.VISIBLE);
         errorView.setVisibility(View.GONE);
         emptyView.setVisibility(View.GONE);
+        loadingView.setVisibility(View.GONE);
     }
 
     protected void setErrorState() {
         cardView.setVisibility(View.GONE);
         errorView.setVisibility(View.VISIBLE);
         emptyView.setVisibility(View.GONE);
+        loadingView.setVisibility(View.GONE);
+    }
+
+    protected void setLoadingState() {
+        buttonNext.setVisibility(View.INVISIBLE);
+        cardView.setVisibility(View.GONE);
+        errorView.setVisibility(View.GONE);
+        emptyView.setVisibility(View.GONE);
+        loadingView.setVisibility(View.VISIBLE);
     }
 }
