@@ -1,59 +1,98 @@
 package com.example.developerslife;
 
-import android.os.Bundle;
+import android.annotation.SuppressLint;
 
-import androidx.fragment.app.Fragment;
+import androidx.annotation.NonNull;
+import io.reactivex.SingleObserver;
+import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.disposables.Disposable;
+import io.reactivex.schedulers.Schedulers;
 
-import android.view.LayoutInflater;
 import android.view.View;
-import android.view.ViewGroup;
 
-/**
- * A simple {@link Fragment} subclass.
- * Use the {@link TopFragment#newInstance} factory method to
- * create an instance of this fragment.
- */
+import com.example.developerslife.network.CacheArrayList;
+import com.example.developerslife.network.NetworkServiceProvider;
+import com.example.developerslife.network.Post;
+import com.example.developerslife.network.Result;
+
 public class TopFragment extends BaseFragment {
 
-    // TODO: Rename parameter arguments, choose names that match
-    // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
-    private static final String ARG_PARAM1 = "param1";
-    private static final String ARG_PARAM2 = "param2";
+    int page = 0;
+    CacheArrayList<Post> cache = new CacheArrayList<>();
 
-    // TODO: Rename and change types of parameters
-    private String mParam1;
-    private String mParam2;
+    @SuppressLint("CheckResult")
+    @Override
+    protected void loadFirstPage() {
+        NetworkServiceProvider
+                .buildService()
+                .getPosts("top", page)
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribeWith(
+                        new SingleObserver<Result>() {
+                            @Override
+                            public void onSubscribe(@NonNull Disposable d) {
 
-    public TopFragment() {
-        // Required empty public constructor
+                            }
+                            @Override
+                            public void onSuccess(@NonNull Result result) {
+                                if (result.getResult().isEmpty()) {
+                                    System.out.println("is empty");
+                                    postsIsReached = true;
+                                    return;
+                                }
+
+                                cache.addAll(result.getResult());
+                                descView.setText(cache.next().getDescription());
+                                buttonNext.setVisibility(View.VISIBLE);
+                            }
+
+                            @Override
+                            public void onError(@NonNull Throwable e) {
+                                System.out.println("error");
+                            }
+                        }
+                );
     }
 
-    /**
-     * Use this factory method to create a new instance of
-     * this fragment using the provided parameters.
-     *
-     * @param param1 Parameter 1.
-     * @param param2 Parameter 2.
-     * @return A new instance of fragment TopFragment.
-     */
-    // TODO: Rename and change types and number of parameters
-    public static TopFragment newInstance(String param1, String param2) {
-        TopFragment fragment = new TopFragment();
-        Bundle args = new Bundle();
-        args.putString(ARG_PARAM1, param1);
-        args.putString(ARG_PARAM2, param2);
-        fragment.setArguments(args);
-        return fragment;
+    @SuppressLint("CheckResult")
+    @Override
+    protected void loadNextPage() {
+        page++;
+        NetworkServiceProvider
+                .buildService()
+                .getPosts("top", page)
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribeWith(new SingleObserver<Result>() {
+                    @Override
+                    public void onSubscribe(@NonNull Disposable d) {
+
+                    }
+
+                    @Override
+                    public void onSuccess(@NonNull Result result) {
+                        if (result.getResult().isEmpty()) {
+                            System.out.println("is empty");
+                            postsIsReached = true;
+                            buttonNext.setVisibility(View.INVISIBLE);
+                            return;
+                        }
+
+                        cache.addAll(result.getResult());
+                        descView.setText(cache.next().getDescription());
+                    }
+
+                    @Override
+                    public void onError(@NonNull Throwable e) {
+                        System.out.println("error");
+
+                    }
+                });
     }
 
     @Override
-    public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        if (getArguments() != null) {
-            mParam1 = getArguments().getString(ARG_PARAM1);
-            mParam2 = getArguments().getString(ARG_PARAM2);
-        }
+    protected CacheArrayList<Post> getCache() {
+        return cache;
     }
-
-
 }

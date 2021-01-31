@@ -50,7 +50,7 @@
             app:tint="@color/white"
             app:backgroundTint="@color/purple_500"
             android:src="@drawable/ic_32_arrow_back"
-            android:visibility="gone"
+            android:visibility="invisible"
             app:layout_constraintBottom_toBottomOf="@+id/button_next"
             app:layout_constraintEnd_toStartOf="@+id/button_next"
             app:layout_constraintHorizontal_bias="0.5"
@@ -68,7 +68,9 @@
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintHorizontal_bias="0.5"
-            app:layout_constraintStart_toEndOf="@+id/button_prev" />
+            app:layout_constraintStart_toEndOf="@+id/button_prev"
+            android:visibility="invisible"
+            tools:visibility="visible" />
 
 
 </androidx.constraintlayout.widget.ConstraintLayout>
